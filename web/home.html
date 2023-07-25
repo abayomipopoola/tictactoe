@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TicTacToe</title>
+    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+    <style>body {text-align: center;font-family: Helvetica, sans-serif;}.game {display: flex;justify-content: center;}.square {background: #fff;border: 1px solid #999;float: left;font-size: 34px;font-weight: bold;line-height: 44px;height: 44px;margin-right: -1px;margin-top: -1px;padding: 0;text-align: center;width: 44px;}.board-row:after {clear: both;content: '';display: table;}</style>
+</head>
+<body>
+	<h1>Tic-Tac-Toe</h1>
+    {{if .Game.Winner}}
+    <p>Winner: {{.Game.Winner}}</p>
+    {{else}}
+    <p>Player's turn : {{.Game.PlayerTurn}}</p>
+    {{end}}
+
+    <div class="game">  
+        <div class="board">
+            {{$Game := .Game}}
+            {{range $i, $row := .Game.Board}}
+            <div class="board-row">
+                {{range $j, $cell := $row}}
+                <!-- button GET a click via AJAX -->
+                <button class="square" hx-get="/web/player/{{$Game.PlayerTurn}}/move?row={{$i}}&col={{$j}}"
+                    hx-swap="innerHTML" 
+                    hx-target="body">
+                        {{if $cell}}
+                            {{$cell}}
+                        {{end}}
+                </button>
+                {{end}}
+            </div>
+            {{end}}
+        </div>
+    </div>
+
+    <br>
+    <!-- button POST a click via AJAX -->
+    <button hx-delete="/web/reset" hx-swap="innerHTML" hx-target="body">
+        Reset
+    </button>
+</body>
+</html>

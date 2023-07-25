@@ -2,8 +2,10 @@
 
 Classic game of TicTacToe with Go/HTMX. 
 
-Go - https://go.dev/
-HTMX - https://htmx.org/
+![tic-tac-toe](./game.png)
+
+- Go - https://go.dev/
+- HTMX - https://htmx.org/
 
 ## Endpoints
 
@@ -35,7 +37,7 @@ Run the command below from the home directory:
 
 This will start the game server on port 3000.
 
-## Play game on your web brwoser
+## Play game on your web browser
 
 1. Access the home page at `http://localhost:3000/`.
 2. To make a move, click on any unoccupied square within the displayed game board.

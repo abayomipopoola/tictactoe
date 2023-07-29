@@ -109,13 +109,10 @@ func writeJSONResponse(w http.ResponseWriter, g Game) {
 	// set content type to application/json
 	w.Header().Set("Content-Type", "application/json")
 
-	// use json package to marshal GamePlay
-	jsonData, err := json.Marshal(gamePlay)
+	// use json package to encode GamePlay directly to the ResponseWriter
+	err := json.NewEncoder(w).Encode(gamePlay)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// write JSON response
-	w.Write(jsonData)
 }

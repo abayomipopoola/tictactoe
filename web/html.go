@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	. "github.com/abayomipopoola/game/tictactoe"
 	"github.com/go-chi/chi/v5"
@@ -15,17 +16,13 @@ import (
 var content embed.FS
 
 type HomeParams struct {
-	Game GamePlay
+	Move
 }
 
 func Home(w io.Writer, p HomeParams) error {
 	home := template.Must(template.ParseFS(content, "home.html"))
 	return home.Execute(w, p)
 }
-
-/**
-*	The handler functions below are extras for playing the game on the web.
- */
 
 func (h *Handler) Home() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -34,11 +31,11 @@ func (h *Handler) Home() http.HandlerFunc {
 			h.game.GetTurn(),
 			h.game.GetWinner(),
 		}
-		_ = Home(w, HomeParams{gamePlay})
+		_ = Home(w, HomeParams{Move{gamePlay, time.Now().Unix()}})
 	}
 }
 
-func (h *Handler) ResetWeb() http.HandlerFunc {
+func (h *Handler) Reset() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		h.game.NewGame()
 		gamePlay := GamePlay{
@@ -46,11 +43,15 @@ func (h *Handler) ResetWeb() http.HandlerFunc {
 			h.game.GetTurn(),
 			h.game.GetWinner(),
 		}
-		_ = Home(w, HomeParams{gamePlay})
+
+		move := Move{gamePlay, time.Now().Unix()}
+		h.queue.Enqueue(move)
+		h.pubsub.Publish()
+		_ = Home(w, HomeParams{move})
 	}
 }
 
-func (h *Handler) MoveWeb() http.HandlerFunc {
+func (h *Handler) Move() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		player := chi.URLParam(r, "playerID")
 		row, _ := strconv.Atoi(r.URL.Query().Get("row"))
@@ -66,6 +67,10 @@ func (h *Handler) MoveWeb() http.HandlerFunc {
 			h.game.GetTurn(),
 			h.game.GetWinner(),
 		}
-		_ = Home(w, HomeParams{gamePlay})
+
+		move := Move{gamePlay, time.Now().Unix()}
+		h.queue.Enqueue(move)
+		h.pubsub.Publish()
+		_ = Home(w, HomeParams{move})
 	}
 }

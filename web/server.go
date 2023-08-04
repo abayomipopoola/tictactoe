@@ -1,28 +1,27 @@
 package web
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
+	"github.com/abayomipopoola/game/polling"
 	. "github.com/abayomipopoola/game/tictactoe"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
-
-// Define Tic-Tac-Toe game interface
-type Game interface {
-	NewGame()
-	Move(player Player, row, column int) error
-	GetBoard() [BoardSize][BoardSize]*Player
-	GetTurn() Player
-	GetWinner() *Player
-}
 
 // Active game play representation
 type GamePlay struct {
 	Board      [BoardSize][BoardSize]*Player
 	PlayerTurn Player
 	Winner     *Player
+}
+
+type Move struct {
+	GamePlay
+	CreatedAt int64
 }
 
 // Player Post request
@@ -34,85 +33,93 @@ type PlayRequest struct {
 
 type Handler struct {
 	*chi.Mux
-	game Game
+	game   Game
+	pool   *PlayerPool
+	queue  *polling.Queue[Move]
+	pubsub *polling.PubSub
 }
 
 func NewHandler(game Game) *Handler {
 	h := &Handler{
-		Mux:  chi.NewMux(),
-		game: game,
+		Mux:    chi.NewMux(),
+		game:   game,
+		pool:   NewPlayerPool(2),
+		queue:  polling.NewQueue[Move](9),
+		pubsub: polling.NewPubSub(),
 	}
 
 	// chi custom logger
 	h.Use(middleware.Logger)
+	h.Use(middleware.Timeout(30 * time.Second))
 
-	// REST endpoints for game logic
-	h.Route("/game", func(r chi.Router) {
-		r.Get("/", h.Game())      // GET /game
-		r.Post("/move", h.Move()) // POST /game/move
-		r.Delete("/", h.Reset())  // DELETE /game
-	})
-
-	// Extras: HTML web handlers
+	// web handlers
 	h.Get("/", h.Home())
 	h.Route("/web", func(r chi.Router) {
-		r.Get("/player/{playerID}/move", h.MoveWeb())
-		r.Delete("/reset", h.ResetWeb())
+		r.Get("/init", h.Init())
+		r.Get("/updates", h.Updates())
+		r.Get("/player/{playerID}/move", h.Move())
+		r.Delete("/reset", h.Reset())
 	})
 
 	return h
 }
 
-func (h *Handler) Game() http.HandlerFunc {
+func (h *Handler) Init() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		writeJSONResponse(w, h.game)
-	}
-}
-
-func (h *Handler) Move() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var play PlayRequest
-
-		// decode request body into person struct
-		err := json.NewDecoder(r.Body).Decode(&play)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		// Check if new player can join the game
+		if ok, pID := h.pool.CanPlay(); ok {
+			jsonString := fmt.Sprintf(`{"id": "%s", "ts": "%s"}`, pID, h.pool.play[pID])
+			w.Write([]byte(jsonString))
 			return
 		}
 
-		err = h.game.Move(play.Player, play.Row, play.Column)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		player := r.URL.Query().Get("player")
+		ts := r.URL.Query().Get("ts")
+		// check for active game
+		if (player == "X" || player == "O") && h.pool.play[player] == ts {
+			jsonString := fmt.Sprintf(`{"id": "%s", "ts": "%s"}`, player, ts)
+			w.Write([]byte(jsonString))
 			return
 		}
 
-		writeJSONResponse(w, h.game)
+		jsonString := fmt.Sprintf(`{"id": "%s", "ts": "%s"}`, "-1", "")
+		w.Write([]byte(jsonString))
 	}
 }
 
-func (h *Handler) Reset() http.HandlerFunc {
+func (h *Handler) Updates() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		h.game.NewGame()
+		lastUpdate := r.URL.Query().Get("lastUpdate")
+		lastUpdateUnix, _ := strconv.ParseInt(lastUpdate, 10, 64)
+		getMoves := func() []Move {
+			moves := h.queue.Copy()
+			filtered := []Move{}
+			for _, move := range moves {
+				if move.CreatedAt > lastUpdateUnix {
+					filtered = append(filtered, move)
+				}
+			}
+			return filtered
+		}
 
-		// return a 204 No Content status
-		w.WriteHeader(http.StatusNoContent)
-	}
-}
+		moves := getMoves()
+		if len(moves) > 0 {
+			// update the http client hypermedia rep of game state
+			_ = Home(w, HomeParams{moves[0]})
+			return
+		}
 
-// utility function to write JSON response
-func writeJSONResponse(w http.ResponseWriter, g Game) {
-	gamePlay := GamePlay{
-		g.GetBoard(),
-		g.GetTurn(),
-		g.GetWinner(),
-	}
-	// set content type to application/json
-	w.Header().Set("Content-Type", "application/json")
+		ch, close := h.pubsub.Subscribe()
+		defer close()
 
-	// use json package to encode GamePlay directly to the ResponseWriter
-	err := json.NewEncoder(w).Encode(gamePlay)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		select {
+		case <-ch:
+			moves = getMoves()
+			// update the http client hypermedia rep of game state
+			_ = Home(w, HomeParams{moves[0]})
+		case <-r.Context().Done():
+			w.WriteHeader(http.StatusRequestTimeout)
+			w.Write([]byte("request timed out"))
+		}
 	}
 }

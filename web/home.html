@@ -7,7 +7,7 @@
     <style>body {text-align: center;font-family: Helvetica, sans-serif;}.game {display: flex;justify-content: center;}.square {background: #fff;border: 1px solid #999;float: left;font-size: 34px;font-weight: bold;line-height: 44px;height: 44px;margin-right: -1px;margin-top: -1px;padding: 0;text-align: center;width: 44px;}.board-row:after {clear: both;content: '';display: table;}.disabled { pointer-events: none; opacity: 0.5; }</style>
 </head>
 <body>
-    <div id="game-canvas" x-data="{ flag: ['1','2'].includes(localStorage.getItem('xAo'))}">
+    <div id="game-canvas" x-data="{ flag: canPlay() }">
         <h1>Tic-Tac-Toe</h1>
         {{if .Winner}}
         <p>Winner: {{.Winner}}</p>
@@ -61,6 +61,7 @@
     <script>
         window.onload = () => localStorage.setItem('xAo', '{{.Counter}}');
         var gb = document.getElementById('game-board'), gm = document.getElementById('game-msg'),
+            canPlay = () => !!localStorage.getItem('xAo') && ['1', '2'].includes(localStorage.getItem('xAo'));
             checkTurns = (counter) => {
                 const xo = localStorage.getItem('xAo')
                 if ((counter % 2 === 0 && xo === '1') || (counter % 2 !== 0 && xo === '2')) {

@@ -3,10 +3,11 @@
 <head>
     <title>TicTacToe</title>
     <script src="https://unpkg.com/htmx.org@1.9.4"></script>
-    <style>body {text-align: center;font-family: Helvetica, sans-serif;}.game {display: flex;justify-content: center;}.square {background: #fff;border: 1px solid #999;float: left;font-size: 34px;font-weight: bold;line-height: 44px;height: 44px;margin-right: -1px;margin-top: -1px;padding: 0;text-align: center;width: 44px;}.board-row:after {clear: both;content: '';display: table;}</style>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>body {text-align: center;font-family: Helvetica, sans-serif;}.game {display: flex;justify-content: center;}.square {background: #fff;border: 1px solid #999;float: left;font-size: 34px;font-weight: bold;line-height: 44px;height: 44px;margin-right: -1px;margin-top: -1px;padding: 0;text-align: center;width: 44px;}.board-row:after {clear: both;content: '';display: table;}.disabled { pointer-events: none; opacity: 0.5; }</style>
 </head>
 <body>
-    <div id="game-canvas">
+    <div id="game-canvas" x-data="{ flag: ['1','2'].includes(localStorage.getItem('xAo'))}">
         <h1>Tic-Tac-Toe</h1>
         {{if .Winner}}
         <p>Winner: {{.Winner}}</p>
@@ -16,13 +17,13 @@
 
         <div class="game">  
             <div class="board" id="game-board" style="pointer-events: none;">
-                {{$Game := .}}
+                {{$temp := .}}
                 {{range $i, $row := .Board}}
                 <div class="board-row">
                     {{range $j, $cell := $row}}
                     <!-- button GET via AJAX -->
                     <button class="square"
-                        hx-get="/web/player/{{$Game.PlayerTurn}}/move?row={{$i}}&col={{$j}}"
+                        hx-get="/web/player/{{$temp.PlayerTurn}}/move?row={{$i}}&col={{$j}}"
                         hx-swap="outerHTML"
                         hx-target="#game-canvas">
                             {{if $cell}}
@@ -36,12 +37,21 @@
         </div>
 
         <br>
-        <!-- button DELETE via AJAX -->
-        <button hx-delete="/web/reset" hx-swap="outerHTML" hx-target="#game-canvas">Reset</button>
+        <div x-show="flag">
+            <!-- button DELETE via AJAX -->
+            <button id="reset-btn"
+                hx-delete="/web/reset" 
+                hx-swap="outerHTML" 
+                hx-target="#game-canvas">
+                Reset
+            </button>
+            <p id="game-msg" style="margin: 15px;"></p>
+        </div>
+        <p x-show="!flag" style="margin: 15px;">You're watching an active game</p>
 
         <!-- Polling /web/updates for new moves -->
-        <div hx-get="/web/updates?lastUpdate={{$Game.CreatedAt}}" 
-            hx-on::before-request="checkPlayerTurn('{{$Game.PlayerTurn}}')"
+        <div hx-get="/web/updates?lastUpdate={{.CreatedAt}}" 
+            hx-on::before-request="checkTurns('{{.Counter}}')"
             hx-trigger="every 0.5s"
             hx-swap="innerHTML" 
             hx-target="#game-canvas"> 
@@ -49,19 +59,16 @@
     </div>
 
     <script>
-        var store = localStorage.getItem('xAo');
-        var xo = !!store ? JSON.parse(store) : {id: "-1", ts: `${new Date().getTime()}`};
-        window.onload = function() {
-            fetch(`/web/init?player=${xo.id}&ts=${xo.ts}`)
-            .then(response => response.text())
-            .then(data => localStorage.setItem('xAo', data))
-            //.catch(...);
-        };
-        function checkPlayerTurn(playerTurn) {
-            var gameSquare = document.getElementById('game-board');
-            if (playerTurn === xo.id) gameSquare.style.pointerEvents = "auto";
-            else gameSquare.style.pointerEvents = "none";
-        }
+        window.onload = () => localStorage.setItem('xAo', '{{.Counter}}');
+        var gb = document.getElementById('game-board'), gm = document.getElementById('game-msg'),
+            checkTurns = (counter) => {
+                const xo = localStorage.getItem('xAo')
+                if ((counter % 2 === 0 && xo === '1') || (counter % 2 !== 0 && xo === '2')) {
+                    gb.style.pointerEvents = "auto"; gm.innerText = "Your turn to move";
+                } else {
+                    gb.style.pointerEvents = "none"; gm.innerText = "Waiting for other player";
+                }
+            }
     </script>
 </body>
 </html>

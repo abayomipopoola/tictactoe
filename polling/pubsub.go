@@ -3,14 +3,13 @@ package polling
 import "sync"
 
 type PubSub struct {
-	channels []chan struct{}
-	lock     *sync.RWMutex
+	channels map[chan struct{}]struct{}
+	lock     sync.RWMutex
 }
 
 func NewPubSub() *PubSub {
 	return &PubSub{
-		channels: make([]chan struct{}, 0),
-		lock:     new(sync.RWMutex),
+		channels: make(map[chan struct{}]struct{}),
 	}
 }
 
@@ -19,18 +18,13 @@ func (p *PubSub) Subscribe() (<-chan struct{}, func()) {
 	defer p.lock.Unlock()
 
 	c := make(chan struct{}, 1)
-	p.channels = append(p.channels, c)
+	p.channels[c] = struct{}{}
 	return c, func() {
 		p.lock.Lock()
 		defer p.lock.Unlock()
 
-		for i, channel := range p.channels {
-			if channel == c {
-				p.channels = append(p.channels[:i], p.channels[i+1:]...)
-				close(c)
-				return
-			}
-		}
+		delete(p.channels, c)
+		close(c)
 	}
 }
 
@@ -38,7 +32,7 @@ func (p *PubSub) Publish() {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
-	for _, channel := range p.channels {
+	for channel := range p.channels {
 		channel <- struct{}{}
 	}
 }

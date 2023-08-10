@@ -64,7 +64,6 @@ func (h *Handler) Updates() http.HandlerFunc {
 			index := sort.Search(len(moves), func(i int) bool {
 				return moves[i].CreatedAt > timestamp
 			})
-
 			return moves[index:]
 		}
 

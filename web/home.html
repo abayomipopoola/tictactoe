@@ -47,7 +47,8 @@
             </button>
             <p id="game-msg" style="margin: 15px;"></p>
         </div>
-        <p x-show="!flag" style="margin: 15px;">You're watching an active game</p>
+        <p x-show="!flag && xo !== '-1'" style="margin: 15px;">Waiting for other player</p>
+        <p x-show="xo === '-1'" style="margin: 15px;">You're watching an active game</p>
 
         <!-- Polling /web/updates for new moves -->
         <div hx-get="/web/updates?lastUpdate={{.CreatedAt}}" 
@@ -59,17 +60,18 @@
     </div>
 
     <script>
-        window.onload = () => localStorage.setItem('xAo', '{{.Counter}}');
-        var gb = document.getElementById('game-board'), gm = document.getElementById('game-msg'),
-            canPlay = () => !!localStorage.getItem('xAo') && ['1', '2'].includes(localStorage.getItem('xAo'));
-            checkTurns = (counter) => {
-                const xo = localStorage.getItem('xAo')
-                if ((counter % 2 === 0 && xo === '1') || (counter % 2 !== 0 && xo === '2')) {
+        var xo, gb = document.getElementById('game-board'), 
+            gm = document.getElementById('game-msg'),
+            canPlay = () => ['1', '2'].includes(xo),
+            checkTurns = c => {
+                if ((c % 2 === 0 && xo === '1') || (c % 2 !== 0 && xo === '2')) {
                     gb.style.pointerEvents = "auto"; gm.innerText = "Your turn to move";
                 } else {
-                    gb.style.pointerEvents = "none"; gm.innerText = "Waiting for other player";
+                    gb.style.pointerEvents = "none"; gm.innerText = "Waiting for other player to move";
                 }
             }
+            // 'xo' tracks player's tick; page refresh disrupts the game.
+            window.onload = () => xo = '{{.Counter}}';
     </script>
 </body>
 </html>

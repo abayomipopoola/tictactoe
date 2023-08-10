@@ -2,22 +2,25 @@
 
 This revised classic game of TicTacToe with Go/HTMX, is a real-time game where two players compete against each other over a network, and other observe the game in progress. Read more about implementation details here: link to article
 
-![tic-tac-toe](./game.png)
+![tic-tac-toe](./tictactoe/game.png)
 
 
 NOTE: You can find the single-player [branch here](https://github.com/abayomipopoola/tictactoe/tree/single-player)
 
 ## Technology
-The game employs long-polling techniques for the communication bridge between the client and the server. When the server receives a message (moves), it broadcasts this to all active connections. A more robust solution might involve using WebSockets. An important consideration is the potential for events transpiring while clients are reconnecting; therefore, integrating a message queue becomes essential. Clients would send the timestamp of the last received message to maintain synchronization. This aspect hasn't been added to the current version.
+
+The multiplayer function over a network uses the long-polling technique for communication between the client and the server. This decision was driven by two main factors: simplicity and the short-lived nature of the application. While WebSockets offer continuous real-time updates, setting up a WebSocket server and maintaining a persistent connection can be more complex and resource-intensive than a straightforward long-polling solution, particularly for applications that don't require constant real-time feedback.
+
+However, one challenge associated with long-polling is the potential risk of missing game events during brief client disconnections. To address this, I integrated a simple message queue data-structure. This ensures that even if a client temporarily loses connection or misses a message, it can retrieve missed game events upon reconnection. Clients send the timestamp of their last received message to maintain synchronization, allowing the server to provide any updates that might have been missed during disconnections.
 
 - Go - https://go.dev/
 - HTMX - https://htmx.org/
 
 ### Server
 
-...
+The server is written in Go, not just for its simplicity and conciseness, but its builtin concurrency support.
 
 
 ### Client
 
-...
+HTMX///

@@ -1,16 +1,16 @@
 # TicTacToe
 
-This revised classic game of TicTacToe with Go/HTMX, is a real-time game where two players compete against each other over a network, and other observe the game in progress. Read more about implementation details here: link to article
+This is a revised implementation of the original [TicTacToe game](https://github.com/abayomipopoola/tictactoe/tree/single-player), written in Go/HTMX.
 
 ![tic-tac-toe](./game.png)
 
-NOTE: You can find the single-player [branch here](https://github.com/abayomipopoola/tictactoe/tree/single-player)
+## Features & Functionality
 
-## Technology
+I've enhanced the original game with multiplayer functionality over a network, leveraging the long-polling technique for client-server communication.
 
-The multiplayer function over a network uses the long-polling technique for communication between the client and the server. This decision was driven by two main factors: simplicity and the short-lived nature of the application. While WebSockets offer continuous real-time updates, setting up a WebSocket server and maintaining a persistent connection can be more complex and resource-intensive than a straightforward long-polling solution, particularly for applications that don't require constant real-time feedback.
+The choice of long-polling over WebSockets is due to its simplicity and the application's short-lived nature. While WebSockets provide real-time updates, their setup and maintenance can be more complex and resource-intensive, especially for apps that don't require continuous real-time feedback.
 
-However, one challenge associated with long-polling is the potential risk of missing game events during brief client disconnections. To address this, I integrated a simple message queue data-structure. This ensures that even if a client temporarily loses connection or misses a message, it can retrieve missed game events upon reconnection. Clients send the timestamp of their last received message to maintain synchronization, allowing the server to provide any updates that might have been missed during disconnections.
+However, long-polling comes with a challenge: the possibility of missing game events during brief disconnections. To mitigate this, I implemented a simple PubSub &  Message Queue system on top of the long-polling technique. This guarantees that clients can recover any missed game events upon reconnection. Clients send the timestamp of their last received message to ensure synchronization, allowing the server to deliver any updates missed during disconnections.
 
 ### Server
 

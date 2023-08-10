@@ -11,6 +11,15 @@ const (
 	BoardSize = 3
 )
 
+// Define Tic-Tac-Toe game interface
+type Game interface {
+	NewGame()
+	Move(player Player, row, column int) error
+	GetBoard() [BoardSize][BoardSize]*Player
+	GetTurn() Player
+	GetWinner() *Player
+}
+
 type TicTacToe struct {
 	turn   Player
 	winner *Player

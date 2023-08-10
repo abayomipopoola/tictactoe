@@ -9,15 +9,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-// Define Tic-Tac-Toe game interface
-type Game interface {
-	NewGame()
-	Move(player Player, row, column int) error
-	GetBoard() [BoardSize][BoardSize]*Player
-	GetTurn() Player
-	GetWinner() *Player
-}
-
 // Active game play representation
 type GamePlay struct {
 	Board      [BoardSize][BoardSize]*Player
@@ -96,23 +87,5 @@ func (h *Handler) Reset() http.HandlerFunc {
 
 		// return a 204 No Content status
 		w.WriteHeader(http.StatusNoContent)
-	}
-}
-
-// utility function to write JSON response
-func writeJSONResponse(w http.ResponseWriter, g Game) {
-	gamePlay := GamePlay{
-		g.GetBoard(),
-		g.GetTurn(),
-		g.GetWinner(),
-	}
-	// set content type to application/json
-	w.Header().Set("Content-Type", "application/json")
-
-	// use json package to encode GamePlay directly to the ResponseWriter
-	err := json.NewEncoder(w).Encode(gamePlay)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
 	}
 }

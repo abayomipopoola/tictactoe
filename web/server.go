@@ -2,6 +2,7 @@ package web
 
 import (
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -60,13 +61,11 @@ func (h *Handler) Updates() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		getMovesAfter := func(timestamp int64) []Move {
 			moves := h.queue.Copy()
-			var filtered []Move
-			for _, move := range moves {
-				if move.CreatedAt > timestamp {
-					filtered = append(filtered, move)
-				}
-			}
-			return filtered
+			index := sort.Search(len(moves), func(i int) bool {
+				return moves[i].CreatedAt > timestamp
+			})
+
+			return moves[index:]
 		}
 
 		lastUpdate, _ := strconv.ParseInt(r.URL.Query().Get("lastUpdate"), 10, 64)
@@ -87,6 +86,6 @@ func (h *Handler) Updates() http.HandlerFunc {
 		}
 
 		// If there are any moves, update the client.
-		_ = Home(w, HomeParams{moves[0]})
+		_ = renderHomePage(w, HomeParams{moves[0]})
 	}
 }

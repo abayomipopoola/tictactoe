@@ -21,28 +21,19 @@ type HomeParams struct {
 	Move
 }
 
-func Home(w io.Writer, p HomeParams) error {
-	home := template.Must(template.ParseFS(content, "home.html"))
-	return home.Execute(w, p)
-}
+// Handlers:
 
 func (h *Handler) Home() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Check if new player can join the game
+		var move Move
 		if ok, c := h.pool.CanPlay(); ok {
-			gamePlay := GamePlay{
-				h.game.GetBoard(), h.game.GetTurn(), h.game.GetWinner(), c,
-			}
-			move := Move{gamePlay, time.Now().Unix()}
-			h.queue.Enqueue(move)
-			h.pubsub.Publish()
-			_ = Home(w, HomeParams{Move{gamePlay, time.Now().Unix()}})
-			return
+			gamePlay := h.createGamePlay(c)
+			move = h.enqueueAndPublish(gamePlay)
+		} else {
+			gamePlay := h.createGamePlay(-1)
+			move = Move{gamePlay, time.Now().Unix()}
 		}
-		gamePlay := GamePlay{
-			h.game.GetBoard(), h.game.GetTurn(), h.game.GetWinner(), -1,
-		}
-		_ = Home(w, HomeParams{Move{gamePlay, time.Now().Unix()}})
+		_ = renderHomePage(w, HomeParams{move})
 	}
 }
 
@@ -51,14 +42,9 @@ func (h *Handler) Reset() http.HandlerFunc {
 		h.game.NewGame()
 		h.pool = NewPlayerPool(2)
 		count = 0
-		gamePlay := GamePlay{
-			h.game.GetBoard(), h.game.GetTurn(), h.game.GetWinner(), count,
-		}
-
-		move := Move{gamePlay, time.Now().Unix()}
-		h.queue.Enqueue(move)
-		h.pubsub.Publish()
-		_ = Home(w, HomeParams{move})
+		gamePlay := h.createGamePlay(count)
+		move := h.enqueueAndPublish(gamePlay)
+		_ = renderHomePage(w, HomeParams{move})
 	}
 }
 
@@ -75,13 +61,31 @@ func (h *Handler) Move() http.HandlerFunc {
 			return
 		}
 
-		gamePlay := GamePlay{
-			h.game.GetBoard(), h.game.GetTurn(), h.game.GetWinner(), count,
-		}
-
-		move := Move{gamePlay, time.Now().Unix()}
-		h.queue.Enqueue(move)
-		h.pubsub.Publish()
-		_ = Home(w, HomeParams{move})
+		gamePlay := h.createGamePlay(count)
+		move := h.enqueueAndPublish(gamePlay)
+		_ = renderHomePage(w, HomeParams{move})
 	}
+}
+
+// Helpers:
+
+func renderHomePage(w io.Writer, p HomeParams) error {
+	home := template.Must(template.ParseFS(content, "home.html"))
+	return home.Execute(w, p)
+}
+
+func (h *Handler) createGamePlay(c int) GamePlay {
+	return GamePlay{
+		Board:      h.game.GetBoard(),
+		PlayerTurn: h.game.GetTurn(),
+		Winner:     h.game.GetWinner(),
+		Counter:    c,
+	}
+}
+
+func (h *Handler) enqueueAndPublish(gamePlay GamePlay) Move {
+	move := Move{gamePlay, time.Now().Unix()}
+	h.queue.Enqueue(move)
+	h.pubsub.Publish()
+	return move
 }

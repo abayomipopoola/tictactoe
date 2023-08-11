@@ -18,7 +18,7 @@ The server is written in [Go](https://go.dev), not just for its simplicity and c
 
 The server is written in Go, not only for its simplicity and conciseness but also because of its native concurrency support and a comprehensive standard library. These features make it straightforward to implement a long-polling server with a message queue mechanism. This ensures uninterrupted gameplay, even if a connection drops—all without relying on third-party libraries.
 
-For a detailed code walkthrough, refer to this [tutorial](https://github.com/abayomipopoola/tictactoe/tree/single-player)
+For a detailed code walkthrough, refer to this [tutorial](https://link.medium.com/GQYmPr3WaCb)
 
 ### Client
 
@@ -26,4 +26,4 @@ For a detailed code walkthrough, refer to this [tutorial](https://github.com/aba
 
 Using HTMX can result in faster development, improved performance, and a more direct connection between your server-side code and the front-end.
 
-For a detailed code walkthrough, refer to this [tutorial](https://github.com/abayomipopoola/tictactoe/tree/single-player)
+For a detailed code walkthrough, refer to this [tutorial](https://link.medium.com/GQYmPr3WaCb)
